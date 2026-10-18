@@ -28,12 +28,13 @@ npm run dev
 4. Push again, or run the workflow by hand. The app will be at `https://<user>.github.io/<repo>/`.
 5. On your phone, open the URL and use "Add to Home Screen".
 
-## 4. Email sending (Resend)
-1. Sign up at https://resend.com and create an API key.
-2. To email customers, add and verify your domain in Resend (**Domains**). Without a domain, Resend only delivers to your own Resend account email (fine for testing).
-3. Supabase **Edge Functions > Secrets**: add `RESEND_API_KEY` and `EMAIL_FROM` (for example `My Business <invoices@yourdomain.com>`, or `onboarding@resend.dev` while testing).
-4. Deploy the function: `npx supabase functions deploy send-invoice-email --project-ref <ref>`, or paste `supabase/functions/send-invoice-email/index.ts` into **Edge Functions > Deploy a new function > Via editor** and name it `send-invoice-email`.
-5. In the app: **Settings > Email templates** to edit templates, then on any invoice tap **Send email**. Replies go to the email set in Settings.
+## 4. Email sending (Gmail)
+1. Turn on 2-Step Verification for your Google account, then create an app password at https://myaccount.google.com/apppasswords.
+2. Supabase **Edge Functions > Secrets**: add `GMAIL_USER` (your Gmail address), `GMAIL_APP_PASSWORD` (the 16-character app password) and, optionally, `EMAIL_FROM_NAME` (for example `My Business`).
+3. Deploy the function: `npx supabase functions deploy send-invoice-email --project-ref <ref> --use-api`.
+4. In the app: **Settings > Email templates** to edit templates, then on any invoice tap **Send email**. Replies go to the email set in Settings.
+
+Gmail allows about 500 emails a day. If the Gmail secrets are not set, the function falls back to Resend (`RESEND_API_KEY` and `EMAIL_FROM`), which needs a domain verified in Resend.
 
 ## Notes
 - Product images are stored in the public `product-images` bucket. Anyone with an image link can view it, but only you can upload or delete.
