@@ -11,6 +11,8 @@ import Invoices from './pages/Invoices';
 import InvoiceEditor from './pages/InvoiceEditor';
 import InvoiceView from './pages/InvoiceView';
 import SettingsPage from './pages/Settings';
+import EmailTemplates from './pages/EmailTemplates';
+import SendEmail from './pages/SendEmail';
 
 const tabs = [
   { to: '/invoices', label: 'Invoices' },
@@ -56,6 +58,8 @@ export default function App() {
           <Route path="/customers/new" element={<CustomerForm />} />
           <Route path="/customers/:id" element={<CustomerForm />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/templates" element={<EmailTemplates />} />
+          <Route path="/invoices/:id/email" element={<SendEmail />} />
           <Route path="*" element={<Navigate to="/invoices" replace />} />
         </Routes>
       </main>

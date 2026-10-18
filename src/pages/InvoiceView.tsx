@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Invoice, InvoiceItem, InvoiceStatus, Settings, getSettings, money, supabase } from '../lib/supabase';
 import { buildInvoicePdf } from '../lib/pdf';
+import { EmailLog, listEmailLog } from '../lib/email';
 import { ErrorText, PageHeader, StatusBadge } from '../components/ui';
 
 export default function InvoiceView() {
@@ -10,6 +11,7 @@ export default function InvoiceView() {
   const [inv, setInv] = useState<Invoice | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [log, setLog] = useState<EmailLog[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -21,6 +23,7 @@ export default function InvoiceView() {
       const { data: its } = await supabase.from('invoice_items').select('*').eq('invoice_id', id).order('position');
       setItems((its ?? []) as InvoiceItem[]);
       setSettings(await getSettings());
+      listEmailLog(id!).then(setLog).catch(() => {});
     })();
   }, [id]);
 
@@ -111,15 +114,27 @@ export default function InvoiceView() {
         {inv.status === 'draft' && <button className="btn-secondary" onClick={() => setStatus('sent')}>Mark sent</button>}
         {inv.status !== 'void' && inv.status !== 'draft' && <button className="btn-secondary" onClick={() => setStatus('void')}>Void</button>}
         <Link to={`/invoices/${inv.id}/edit`} className="btn-secondary">Edit</Link>
-        {c?.email && (
-          <a className="btn-secondary"
-             href={`mailto:${c.email}?subject=${encodeURIComponent(`Invoice ${inv.number}`)}&body=${encodeURIComponent(
-               `Hi ${c.name},\n\nPlease find invoice ${inv.number} for ${money(inv.total, cur)}${inv.due_date ? `, due ${inv.due_date}` : ''}.\n\nThanks,\n${settings.business_name}`)}`}>
-            Email
-          </a>
-        )}
+        <Link to={`/invoices/${inv.id}/email`} className="btn-primary">Send email</Link>
         <button className="btn-danger" onClick={remove}>Delete</button>
       </div>
+
+      {log.length > 0 && (
+        <div className="card">
+          <h2 className="font-semibold mb-2">Email history</h2>
+          <ul className="divide-y text-sm">
+            {log.map(l => (
+              <li key={l.id} className="py-2">
+                <div className="flex justify-between gap-2">
+                  <span className="truncate">{l.to_email}</span>
+                  <span className={l.status === 'sent' ? 'text-green-600' : 'text-red-600'}>{l.status}</span>
+                </div>
+                <div className="text-gray-500">{new Date(l.created_at).toLocaleString()} - {l.subject}</div>
+                {l.error && <div className="text-red-600">{l.error}</div>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

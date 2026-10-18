@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Settings, getSettings, publicUrl, supabase, uploadImage } from '../lib/supabase';
 import { ErrorText, PageHeader } from '../components/ui';
 
@@ -68,6 +69,10 @@ export default function SettingsPage() {
           <textarea className="input" rows={3} value={s.payment_terms ?? ''} onChange={e => setS({ ...s, payment_terms: e.target.value })} />
         </div>
       </div>
+      <Link to="/settings/templates" className="card flex justify-between items-center">
+        <span className="font-semibold">Email templates</span>
+        <span className="text-gray-400">&rarr;</span>
+      </Link>
       <ErrorText msg={error} />
       {msg && <p className="text-green-600 text-sm">{msg}</p>}
       <button className="btn-primary w-full" disabled={busy}>{busy ? 'Saving...' : 'Save settings'}</button>
