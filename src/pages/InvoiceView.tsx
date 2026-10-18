@@ -16,6 +16,7 @@ export default function InvoiceView() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [pdf, setPdf] = useState<File | null>(null);
+  const [shareFallback, setShareFallback] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -61,19 +62,32 @@ export default function InvoiceView() {
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
 
-  const canShareFiles = (f: File) => Boolean(navigator.canShare?.({ files: [f] }));
+  // In-app browsers (WhatsApp, Gmail, Facebook, Instagram...) usually block file sharing.
+  const inAppBrowser = /FBAN|FBAV|Instagram|Line\/|WhatsApp|GSA\/|Snapchat|LinkedInApp|; wv\)/i.test(navigator.userAgent);
+
+  // Opens the PDF in the browser's viewer, which has its own Share button (works on iPhone Safari).
+  function openPdf() {
+    if (!pdf) return;
+    const url = URL.createObjectURL(pdf);
+    if (!window.open(url, '_blank')) window.location.href = url;
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
 
   // Called synchronously from the tap so iOS keeps the user-gesture permission.
   function shareFile(onDone: () => void) {
     if (!pdf) return;
-    setError('');
-    if (!canShareFiles(pdf)) {
-      setError('This browser cannot share files. Use Download PDF or WhatsApp link.');
+    setError(''); setShareFallback(false);
+    if (!navigator.share) {
+      setShareFallback(true);
       return;
     }
+    // Try even when canShare() says no; some iOS versions report false but still share files.
     navigator.share({ files: [pdf], title: `Invoice ${inv!.number}` })
       .then(onDone)
-      .catch((e: any) => { if (e?.name !== 'AbortError') setError(e.message ?? String(e)); });
+      .catch((e: any) => {
+        if (e?.name === 'AbortError') return;
+        setShareFallback(true);
+      });
   }
 
   const markSentIfDraft = async () => { if (inv!.status === 'draft') await setStatus('sent'); };
@@ -135,6 +149,15 @@ export default function InvoiceView() {
       {inv.notes && <div className="card text-sm whitespace-pre-line">{inv.notes}</div>}
 
       <ErrorText msg={error} />
+      {shareFallback && (
+        <div className="card border border-amber-300 bg-amber-50 text-sm space-y-2">
+          <div className="font-semibold">This browser can't share files directly</div>
+          {inAppBrowser
+            ? <div>You're in an app's built-in browser. Tap the menu (... or the compass icon) and choose <b>Open in Safari</b>, then try again.</div>
+            : <div>Tap <b>Open PDF</b>, then use the Share button in the PDF viewer to send it to WhatsApp, or use <b>WhatsApp link</b>.</div>}
+          <button className="btn-secondary w-full" onClick={openPdf}>Open PDF</button>
+        </div>
+      )}
       {!pdf && <p className="text-sm text-gray-500">Preparing PDF...</p>}
       <div className="grid grid-cols-2 gap-2">
         <button className="btn-primary" disabled={busy || !pdf} onClick={share}>Share PDF</button>
