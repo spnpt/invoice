@@ -179,11 +179,10 @@ export default function InvoiceView() {
             {log.map(l => (
               <li key={l.id} className="py-2">
                 <div className="flex justify-between gap-2">
-                  <span className="truncate">{l.to_email}</span>
-                  <span className={l.status === 'sent' ? 'text-green-600' : 'text-red-600'}>{l.status}</span>
+                  <span className="truncate">{l.to_email}{l.cc_email && <span className="text-gray-500"> (cc {l.cc_email})</span>}</span>
+                  <span className="text-green-600">Sent</span>
                 </div>
                 <div className="text-gray-500">{new Date(l.created_at).toLocaleString()} - {l.subject}</div>
-                {l.error && <div className="text-red-600">{l.error}</div>}
               </li>
             ))}
           </ul>

@@ -89,9 +89,10 @@ export async function emailConfigured(): Promise<boolean> {
   return Boolean((data as { configured?: boolean })?.configured);
 }
 
+/** Successfully sent emails for an invoice (failed attempts stay in the table but are not shown). */
 export async function listEmailLog(invoiceId: string): Promise<EmailLog[]> {
   const { data, error } = await supabase.from('email_log').select('*').eq('invoice_id', invoiceId)
-    .order('created_at', { ascending: false });
+    .eq('status', 'sent').order('created_at', { ascending: false });
   if (error) throw error;
   return data as EmailLog[];
 }
