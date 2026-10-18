@@ -1,7 +1,7 @@
 # Invoice App
 
 A mobile-friendly invoicing app: products (with images), customers, invoices with PDF export, sharing and email sending with editable templates.
-It's a static React app hosted on GitHub Pages, with Supabase handling the database, login, image storage and email sending (Edge Function + Resend).
+It's a static React app hosted on GitHub Pages, with Supabase handling the database, login, image storage and email sending (Edge Function + Gmail).
 
 Live: https://spnpt.github.io/invoice/  -  AI assistants and contributors: read [AGENTS.md](AGENTS.md).
 
@@ -34,7 +34,7 @@ npm run dev
 3. Deploy the function: `npx supabase functions deploy send-invoice-email --project-ref <ref> --use-api`.
 4. In the app: **Settings > Email templates** to edit templates, then on any invoice tap **Send email**. Replies go to the email set in Settings.
 
-Gmail allows about 500 emails a day. If the Gmail secrets are not set, the function falls back to Resend (`RESEND_API_KEY` and `EMAIL_FROM`), which needs a domain verified in Resend.
+Gmail allows about 500 emails a day.
 
 ## Notes
 - Product images are stored in the public `product-images` bucket. Anyone with an image link can view it, but only you can upload or delete.

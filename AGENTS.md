@@ -17,7 +17,7 @@ Phone browser (React SPA on GitHub Pages)
    |-- supabase-js --> Supabase Auth      (email + password, single owner, sign-ups disabled)
    |               --> Supabase Postgres  (all tables protected by row-level security)
    |               --> Supabase Storage   (bucket "product-images", public read, owner-only write)
-   '-- functions.invoke --> Edge Function "send-invoice-email" --> Gmail SMTP :465 (or Resend fallback)
+   '-- functions.invoke --> Edge Function "send-invoice-email" --> Gmail SMTP :465
 ```
 There is **no custom backend server**. GitHub Pages only serves static files. Anything secret
 or server-side must go in a Supabase Edge Function or in Postgres (RLS / functions).
@@ -39,7 +39,7 @@ or server-side must go in a Supabase Edge Function or in Postgres (RLS / functio
 | `src/pages/*` | One screen per file (list and form pairs) |
 | `supabase/schema.sql` | Core tables, RLS, `save_invoice()` RPC, storage bucket and policies |
 | `supabase/002_email.sql` | `email_templates` and `email_log` tables with RLS |
-| `supabase/functions/send-invoice-email/index.ts` | Sends email (Gmail SMTP via nodemailer, or Resend) as the calling user |
+| `supabase/functions/send-invoice-email/index.ts` | Sends email through Gmail SMTP (nodemailer) as the calling user |
 | `.github/workflows/deploy.yml` | Builds and deploys to GitHub Pages on push to `main` |
 | `.env.production` | Public Supabase URL and anon key (safe to commit, see Security) |
 
@@ -84,11 +84,11 @@ Deploying the frontend is a `git push` to `main`; GitHub Actions does the rest.
 ## Security model (why the anon key is public)
 The Supabase anon key ships in the JavaScript bundle of any browser app; it is not a secret.
 Data is protected by RLS, by sign-ups being disabled, and by the owner's password. The only secrets are
-the `service_role` key (never used here) and the email credentials (`GMAIL_APP_PASSWORD` or `RESEND_API_KEY`), stored only in Edge Function secrets.
+the `service_role` key (never used here) and the Gmail app password (`GMAIL_APP_PASSWORD`), stored only in Edge Function secrets.
 Supabase Edge blocks outbound SMTP ports 25 and 587, so Gmail must use port 465 (implicit TLS).
 
 ## Known limitations and ideas
 - Single currency per business, and tax is per line (no compound taxes)
 - No offline data editing (the PWA caches only the app shell)
 - No automated tests; adding Vitest for `calcTotals` and `render` would be a good first step
-- Gmail sending is limited to about 500 emails a day; Resend needs a verified domain
+- Gmail sending is limited to about 500 emails a day. For higher volume, use a provider such as Resend with a custom domain.

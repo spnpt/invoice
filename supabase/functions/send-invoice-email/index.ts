@@ -1,11 +1,8 @@
-// Supabase Edge Function: send an invoice email with the PDF attached.
-// Provider is chosen from secrets (Supabase Dashboard > Edge Functions > Secrets):
-//   Gmail (preferred when set):
-//     GMAIL_USER          - your Gmail address, e.g. you@gmail.com
-//     GMAIL_APP_PASSWORD  - 16-char app password from https://myaccount.google.com/apppasswords
-//     EMAIL_FROM_NAME     - optional display name, e.g. "My Business"
-//   Resend (fallback):
-//     RESEND_API_KEY, EMAIL_FROM  - requires a domain verified in Resend
+// Supabase Edge Function: send an invoice email with the PDF attached, via Gmail SMTP.
+// Secrets (Supabase Dashboard > Edge Functions > Secrets):
+//   GMAIL_USER          - your Gmail address, e.g. you@gmail.com
+//   GMAIL_APP_PASSWORD  - 16-char app password from https://myaccount.google.com/apppasswords
+//   EMAIL_FROM_NAME     - optional display name, e.g. "My Business"
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6.9.16';
 
@@ -50,28 +47,13 @@ async function sendGmail(m: Mail, user: string, pass: string): Promise<SendResul
   }
 }
 
-async function sendResend(m: Mail, apiKey: string, from: string): Promise<SendResult> {
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from, to: [m.to], cc: m.cc ? [m.cc] : undefined, reply_to: m.replyTo,
-      subject: m.subject, text: m.text, html: m.html,
-      attachments: m.attachment ? [{ filename: m.attachment.filename, content: m.attachment.base64 }] : undefined,
-    }),
-  });
-  const out = await res.json().catch(() => ({}));
-  return res.ok ? { ok: true, id: out.id } : { ok: false, error: out?.message ?? `HTTP ${res.status}` };
-}
-
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const gmailUser = Deno.env.get('GMAIL_USER');
   const gmailPass = Deno.env.get('GMAIL_APP_PASSWORD')?.replace(/\s/g, '');
-  const resendKey = Deno.env.get('RESEND_API_KEY');
-  if (!(gmailUser && gmailPass) && !resendKey) {
+  if (!gmailUser || !gmailPass) {
     return json({ error: 'Email is not configured (set GMAIL_USER and GMAIL_APP_PASSWORD).' }, 500);
   }
 
@@ -108,9 +90,7 @@ Deno.serve(async req => {
       : undefined,
   };
 
-  const result = gmailUser && gmailPass
-    ? await sendGmail(mail, gmailUser, gmailPass)
-    : await sendResend(mail, resendKey!, Deno.env.get('EMAIL_FROM') ?? 'onboarding@resend.dev');
+  const result = await sendGmail(mail, gmailUser, gmailPass);
 
   await supa.from('email_log').insert({
     owner: user.id, invoice_id: inv.id, to_email: to, cc_email: cc || null, subject,
