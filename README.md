@@ -7,7 +7,7 @@ Live: https://spnpt.github.io/invoice/  -  AI assistants and contributors: read 
 
 ## 1. Supabase setup (one time)
 1. Create a free project at https://supabase.com.
-2. In **SQL Editor**, paste and run `supabase/schema.sql`, then `supabase/002_email.sql`.
+2. In **SQL Editor**, paste and run `supabase/schema.sql`, then `supabase/002_email.sql`, then `supabase/003_whatsapp.sql`.
 3. **Authentication > Providers > Email**: keep it enabled and turn **off** "Allow new users to sign up".
 4. **Authentication > Users > Add user**: create your login (email + password, tick auto-confirm).
 5. **Project Settings > API**: copy the Project URL and the `anon` public key.

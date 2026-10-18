@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Invoice, InvoiceItem, InvoiceStatus, Settings, getSettings, money, supabase } from '../lib/supabase';
 import { buildInvoicePdf } from '../lib/pdf';
 import { EmailLog, listEmailLog } from '../lib/email';
+import { openPendingWindow, pdfLink, toWhatsAppNumber, whatsAppMessage, whatsAppUrl } from '../lib/whatsapp';
 import { ErrorText, PageHeader, StatusBadge } from '../components/ui';
 
 export default function InvoiceView() {
@@ -68,6 +69,36 @@ export default function InvoiceView() {
     } finally { setBusy(false); }
   }
 
+  async function whatsAppFile() {
+    setBusy(true); setError('');
+    try {
+      const file = await pdfFile();
+      if (!navigator.canShare?.({ files: [file] })) {
+        setError('This browser cannot attach files. Use "WhatsApp link" instead.');
+        return;
+      }
+      await navigator.share({ files: [file], text: whatsAppMessage(inv!, settings!) });
+      if (inv!.status === 'draft') await setStatus('sent');
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') setError(e.message ?? String(e));
+    } finally { setBusy(false); }
+  }
+
+  async function whatsAppLink() {
+    const w = openPendingWindow();
+    setBusy(true); setError('');
+    try {
+      const link = await pdfLink(inv!, await pdfFile());
+      const number = toWhatsAppNumber(inv!.customers?.phone, settings!.phone_country_code ?? '64');
+      const url = whatsAppUrl(number, whatsAppMessage(inv!, settings!, link));
+      if (w) w.location.href = url; else window.location.href = url;
+      if (inv!.status === 'draft') await setStatus('sent');
+    } catch (e: any) {
+      w?.close();
+      setError(e.message ?? String(e));
+    } finally { setBusy(false); }
+  }
+
   async function remove() {
     if (!confirm('Delete this invoice?')) return;
     const { error } = await supabase.from('invoices').delete().eq('id', inv!.id);
@@ -115,6 +146,8 @@ export default function InvoiceView() {
         {inv.status !== 'void' && inv.status !== 'draft' && <button className="btn-secondary" onClick={() => setStatus('void')}>Void</button>}
         <Link to={`/invoices/${inv.id}/edit`} className="btn-secondary">Edit</Link>
         <Link to={`/invoices/${inv.id}/email`} className="btn-primary">Send email</Link>
+        <button className="btn bg-green-600 text-white active:bg-green-700" disabled={busy} onClick={whatsAppFile}>WhatsApp PDF</button>
+        <button className="btn bg-green-100 text-green-800 active:bg-green-200" disabled={busy} onClick={whatsAppLink}>WhatsApp link</button>
         <button className="btn-danger" onClick={remove}>Delete</button>
       </div>
 

@@ -6,7 +6,7 @@ Read this before changing code.
 ## What this project is
 A mobile-first invoicing web app for a single small business:
 - Manage **products** (with photos), **customers**, and **invoices**
-- Export an invoice as a **PDF**, share it from the phone, or **email** it with the PDF attached
+- Export an invoice as a **PDF**, share it from the phone, **email** it with the PDF attached, or send it on **WhatsApp**
 - Manage reusable **email templates** with `{{placeholders}}`
 
 Live site: https://spnpt.github.io/invoice/  -  Repo: https://github.com/spnpt/invoice
@@ -39,6 +39,8 @@ or server-side must go in a Supabase Edge Function or in Postgres (RLS / functio
 | `src/pages/*` | One screen per file (list and form pairs) |
 | `supabase/schema.sql` | Core tables, RLS, `save_invoice()` RPC, storage bucket and policies |
 | `supabase/002_email.sql` | `email_templates` and `email_log` tables with RLS |
+| `supabase/003_whatsapp.sql` | Private `invoice-pdfs` bucket (signed links) and `settings.phone_country_code` |
+| `src/lib/whatsapp.ts` | Phone number to wa.me format, WhatsApp message, signed PDF link upload |
 | `supabase/functions/send-invoice-email/index.ts` | Sends email through Gmail SMTP (nodemailer) as the calling user |
 | `.github/workflows/deploy.yml` | Builds and deploys to GitHub Pages on push to `main` |
 | `.env.production` | Public Supabase URL and anon key (safe to commit, see Security) |
@@ -64,6 +66,12 @@ Every table has `owner uuid default auth.uid()` and the RLS rule `owner = auth.u
 8. **Storage paths** must start with `<auth.uid()>/`; storage policies depend on it.
 9. **Edge Functions** must create the Supabase client with the caller's `Authorization` header so RLS applies, validate all input, and keep provider keys in function secrets.
 10. Run `npm run build` (typecheck plus build) before committing. There is no test suite yet.
+
+## WhatsApp
+- **WhatsApp PDF** uses the Web Share API (`navigator.share` with files). The user picks WhatsApp in the phone's share menu and the PDF is attached. This needs a mobile browser that supports file sharing.
+- **WhatsApp link** uploads the PDF to the private `invoice-pdfs` bucket at `<uid>/<invoice-id>.pdf`, creates a 30-day signed URL, and opens `https://wa.me/<number>?text=...`. WhatsApp click-to-chat links cannot attach files, so the link is the only way to include the PDF this way.
+- Numbers are converted by `toWhatsAppNumber()` using `settings.phone_country_code` (default `64`, New Zealand) when the customer's phone has no `+` prefix.
+- The blank tab is opened synchronously in the click handler (`openPendingWindow`) so popup blockers allow it.
 
 ## Email templates
 Placeholders are rendered client-side by `render()` in `src/lib/email.ts`:

@@ -30,7 +30,7 @@ export type InvoiceItem = {
 export type Settings = {
   owner?: string; business_name: string; address: string | null; email: string | null; phone: string | null;
   tax_id: string | null; logo_url: string | null; currency: string; default_tax_rate: number;
-  invoice_prefix: string; next_number: number; payment_terms: string | null;
+  invoice_prefix: string; next_number: number; payment_terms: string | null; phone_country_code?: string;
 };
 
 export function publicUrl(path: string | null | undefined) {
@@ -58,7 +58,7 @@ export async function getSettings(): Promise<Settings> {
   if (error) throw error;
   return data ?? {
     business_name: 'My Business', address: null, email: null, phone: null, tax_id: null, logo_url: null,
-    currency: 'NZD', default_tax_rate: 15, invoice_prefix: 'INV-', next_number: 1, payment_terms: null,
+    currency: 'NZD', default_tax_rate: 15, invoice_prefix: 'INV-', next_number: 1, payment_terms: null, phone_country_code: '64',
   };
 }
 

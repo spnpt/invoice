@@ -63,6 +63,7 @@ export default function SettingsPage() {
           {text('default_tax_rate', 'Default tax %', 'number')}
           {text('invoice_prefix', 'Invoice prefix')}
           {text('next_number', 'Next number', 'number')}
+          {text('phone_country_code', 'Phone country code')}
         </div>
         <div>
           <label className="label">Payment terms (printed on invoice)</label>
