@@ -11,6 +11,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Activate new versions immediately so phones don't keep running a stale cached app.
+      workbox: { skipWaiting: true, clientsClaim: true, cleanupOutdatedCaches: true },
       manifest: {
         name: 'Invoice App',
         short_name: 'Invoices',
