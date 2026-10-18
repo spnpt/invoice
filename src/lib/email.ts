@@ -82,6 +82,13 @@ export async function sendInvoiceEmail(args: {
   return data as { id: string };
 }
 
+/** Ask the edge function whether Gmail credentials are configured. */
+export async function emailConfigured(): Promise<boolean> {
+  const { data, error } = await supabase.functions.invoke('send-invoice-email', { body: { check: true } });
+  if (error) return false;
+  return Boolean((data as { configured?: boolean })?.configured);
+}
+
 export async function listEmailLog(invoiceId: string): Promise<EmailLog[]> {
   const { data, error } = await supabase.from('email_log').select('*').eq('invoice_id', invoiceId)
     .order('created_at', { ascending: false });

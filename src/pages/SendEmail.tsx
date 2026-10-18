@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Invoice, InvoiceItem, Settings, getSettings, supabase } from '../lib/supabase';
-import { EmailTemplate, listTemplates, render, sendInvoiceEmail, templateVars } from '../lib/email';
+import { EmailTemplate, emailConfigured, listTemplates, render, sendInvoiceEmail, templateVars } from '../lib/email';
 import { buildInvoicePdf } from '../lib/pdf';
 import { ErrorText, PageHeader } from '../components/ui';
 
@@ -15,6 +15,9 @@ export default function SendEmail() {
   const [f, setF] = useState({ to: '', cc: '', subject: '', body: '', attach: true });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState<boolean | null>(null);
+
+  useEffect(() => { emailConfigured().then(setReady); }, []);
 
   useEffect(() => {
     (async () => {
@@ -72,6 +75,15 @@ export default function SendEmail() {
   return (
     <form onSubmit={send} className="space-y-4">
       <PageHeader title={`Email ${inv.number}`} back={`/invoices/${inv.id}`} />
+      {ready === false && (
+        <div className="card border border-amber-300 bg-amber-50 text-sm space-y-1">
+          <div className="font-semibold">Email sending is not set up yet</div>
+          <div>
+            Add <code>GMAIL_USER</code> and <code>GMAIL_APP_PASSWORD</code> in Supabase under
+            Edge Functions &gt; Secrets (see README). Until then, use WhatsApp or Share PDF on the invoice.
+          </div>
+        </div>
+      )}
       <div className="card space-y-3">
         <div>
           <label className="label">Template</label>
@@ -102,7 +114,7 @@ export default function SendEmail() {
         </label>
       </div>
       <ErrorText msg={error} />
-      <button className="btn-primary w-full" disabled={busy}>{busy ? 'Sending...' : 'Send email'}</button>
+      <button className="btn-primary w-full" disabled={busy || ready === false}>{busy ? 'Sending...' : 'Send email'}</button>
     </form>
   );
 }

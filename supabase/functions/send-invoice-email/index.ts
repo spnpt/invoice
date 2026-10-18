@@ -53,9 +53,7 @@ Deno.serve(async req => {
 
   const gmailUser = Deno.env.get('GMAIL_USER');
   const gmailPass = Deno.env.get('GMAIL_APP_PASSWORD')?.replace(/\s/g, '');
-  if (!gmailUser || !gmailPass) {
-    return json({ error: 'Email is not configured (set GMAIL_USER and GMAIL_APP_PASSWORD).' }, 500);
-  }
+  const configured = Boolean(gmailUser && gmailPass);
 
   // Act as the calling user so row-level security applies to every query.
   const supa = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
@@ -64,8 +62,14 @@ Deno.serve(async req => {
   const { data: { user } } = await supa.auth.getUser();
   if (!user) return json({ error: 'Not signed in' }, 401);
 
-  let p: { invoice_id?: string; to?: string; cc?: string; subject?: string; body?: string; pdf_base64?: string; filename?: string };
+  let p: { check?: boolean; invoice_id?: string; to?: string; cc?: string; subject?: string; body?: string; pdf_base64?: string; filename?: string };
   try { p = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  // Lets the app show setup guidance instead of a failed send.
+  if (p.check) return json({ configured });
+  if (!configured) {
+    return json({ error: 'Email is not set up yet. Add GMAIL_USER and GMAIL_APP_PASSWORD in Supabase Edge Function secrets.' }, 503);
+  }
 
   const to = (p.to ?? '').trim();
   const cc = (p.cc ?? '').trim();
@@ -90,7 +94,7 @@ Deno.serve(async req => {
       : undefined,
   };
 
-  const result = await sendGmail(mail, gmailUser, gmailPass);
+  const result = await sendGmail(mail, gmailUser!, gmailPass!);
 
   await supa.from('email_log').insert({
     owner: user.id, invoice_id: inv.id, to_email: to, cc_email: cc || null, subject,
