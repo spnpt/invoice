@@ -42,10 +42,3 @@ export async function pdfLink(inv: Invoice, pdf: Blob): Promise<string> {
 export function whatsAppUrl(number: string | null, text: string) {
   return `https://wa.me/${number ?? ''}?text=${encodeURIComponent(text)}`;
 }
-
-/** Open a blank tab synchronously in the click handler so popup blockers allow it; navigate it later. */
-export function openPendingWindow(): Window | null {
-  const w = window.open('', '_blank');
-  if (w) w.opener = null;
-  return w;
-}

@@ -62,7 +62,7 @@ export default function EmailTemplates() {
           </div>
           <div>
             <label className="label">Message *</label>
-            <textarea className="input font-mono text-sm" rows={10} required value={edit.body} onChange={e => setEdit({ ...edit, body: e.target.value })} />
+            <textarea className="input font-mono" rows={10} required value={edit.body} onChange={e => setEdit({ ...edit, body: e.target.value })} />
           </div>
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={edit.is_default} onChange={e => setEdit({ ...edit, is_default: e.target.checked })} />

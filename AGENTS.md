@@ -60,7 +60,8 @@ Every table has `owner uuid default auth.uid()` and the RLS rule `owner = auth.u
 2. **Invoices are saved only through the `save_invoice(inv jsonb, items jsonb)` RPC.** It assigns the invoice number and recalculates totals on the server. Don't insert into `invoices` or `invoice_items` directly from the client.
 3. **Invoice lines are snapshots.** Description, price and tax are copied from the product, so later product edits must not change past invoices.
 4. **Use HashRouter-style paths** (`/#/invoices/123`). Don't switch to BrowserRouter, because GitHub Pages would return 404 on deep links.
-5. **Mobile first.** Use large tap targets, a single column, `inputMode="decimal"` on number fields, and keep the bottom navigation.
+5. **Primary target is Safari on iPhone (browser and Add to Home Screen).** See "iPhone Safari rules" below.
+6. **Mobile first.** Use large tap targets, a single column, `inputMode="decimal"` on number fields, and keep the bottom navigation.
 6. **Match existing patterns:** one page per file, `useState` and `useEffect` with direct supabase-js calls, errors shown through `<ErrorText>`, and no global state library.
 7. **Schema changes** go in a new numbered file `supabase/00N_name.sql` that is safe to run more than once (`if not exists`, `drop policy if exists`). Then update this file.
 8. **Storage paths** must start with `<auth.uid()>/`; storage policies depend on it.
@@ -71,7 +72,16 @@ Every table has `owner uuid default auth.uid()` and the RLS rule `owner = auth.u
 - **WhatsApp PDF** uses the Web Share API (`navigator.share` with files). The user picks WhatsApp in the phone's share menu and the PDF is attached. This needs a mobile browser that supports file sharing.
 - **WhatsApp link** uploads the PDF to the private `invoice-pdfs` bucket at `<uid>/<invoice-id>.pdf`, creates a 30-day signed URL, and opens `https://wa.me/<number>?text=...`. WhatsApp click-to-chat links cannot attach files, so the link is the only way to include the PDF this way.
 - Numbers are converted by `toWhatsAppNumber()` using `settings.phone_country_code` (default `64`, New Zealand) when the customer's phone has no `+` prefix.
-- The blank tab is opened synchronously in the click handler (`openPendingWindow`) so popup blockers allow it.
+- The page navigates to the wa.me link in the same tab (not a popup). iOS opens the WhatsApp app directly, and it is never blocked.
+
+## iPhone Safari rules
+- `navigator.share()` only works directly inside a tap. Build files (for example the PDF) **before** the tap and call `share()` with no `await` before it. `InvoiceView` pre-builds the PDF when it loads.
+- When sharing to WhatsApp, share **only the file**. Sharing a file plus text makes WhatsApp on iOS drop one of them.
+- Don't open popups after an `await`, because Safari blocks them. Use same-tab navigation (`window.location.href`) for `wa.me` links.
+- Every input, select and textarea must be at least 16px (`text-base`), or iOS zooms the page on focus. Don't add `text-sm` to `.input`.
+- Respect `env(safe-area-inset-*)`: the body pads the top, and the bottom navigation pads the bottom.
+- Home-screen icons are PNG (`public/apple-touch-icon.png` 180, `icon-192.png`, `icon-512.png`); iOS ignores SVG icons.
+- File inputs: `accept="image/*" capture="environment"` opens the camera, and a plain `accept="image/*"` opens the photo library.
 
 ## Email templates
 Placeholders are rendered client-side by `render()` in `src/lib/email.ts`:

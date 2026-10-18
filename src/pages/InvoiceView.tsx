@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Invoice, InvoiceItem, InvoiceStatus, Settings, getSettings, money, supabase } from '../lib/supabase';
 import { buildInvoicePdf } from '../lib/pdf';
 import { EmailLog, listEmailLog } from '../lib/email';
-import { openPendingWindow, pdfLink, toWhatsAppNumber, whatsAppMessage, whatsAppUrl } from '../lib/whatsapp';
+import { pdfLink, toWhatsAppNumber, whatsAppMessage, whatsAppUrl } from '../lib/whatsapp';
 import { ErrorText, PageHeader, StatusBadge } from '../components/ui';
 
 export default function InvoiceView() {
@@ -15,6 +15,7 @@ export default function InvoiceView() {
   const [log, setLog] = useState<EmailLog[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pdf, setPdf] = useState<File | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -28,6 +29,20 @@ export default function InvoiceView() {
     })();
   }, [id]);
 
+  // Build the PDF ahead of time: iOS Safari only allows navigator.share() directly inside a tap,
+  // so there must be no slow async work between the tap and the share call.
+  useEffect(() => {
+    if (!inv || !settings) return;
+    let cancelled = false;
+    setPdf(null);
+    buildInvoicePdf(inv, items, settings)
+      .then(blob => { if (!cancelled) setPdf(new File([blob], `${inv.number}.pdf`, { type: 'application/pdf' })); })
+      .catch(e => setError(e.message ?? String(e)));
+    return () => { cancelled = true; };
+    // Status changes don't affect the PDF content, so only rebuild when the invoice itself changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inv?.id, items, settings]);
+
   if (error && !inv) return <ErrorText msg={error} />;
   if (!inv || !settings) return <p className="text-gray-500">Loading...</p>;
   const cur = settings.currency;
@@ -38,63 +53,45 @@ export default function InvoiceView() {
     setInv({ ...inv!, status });
   }
 
-  async function pdfFile() {
-    const blob = await buildInvoicePdf(inv!, items, settings!);
-    return new File([blob], `${inv!.number}.pdf`, { type: 'application/pdf' });
+  function download() {
+    if (!pdf) return;
+    const url = URL.createObjectURL(pdf);
+    const a = document.createElement('a');
+    a.href = url; a.download = pdf.name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
 
-  async function download() {
-    setBusy(true);
-    try {
-      const file = await pdfFile();
-      const url = URL.createObjectURL(file);
-      const a = document.createElement('a');
-      a.href = url; a.download = file.name; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-    } finally { setBusy(false); }
+  const canShareFiles = (f: File) => Boolean(navigator.canShare?.({ files: [f] }));
+
+  // Called synchronously from the tap so iOS keeps the user-gesture permission.
+  function shareFile(onDone: () => void) {
+    if (!pdf) return;
+    setError('');
+    if (!canShareFiles(pdf)) {
+      setError('This browser cannot share files. Use Download PDF or WhatsApp link.');
+      return;
+    }
+    navigator.share({ files: [pdf], title: `Invoice ${inv!.number}` })
+      .then(onDone)
+      .catch((e: any) => { if (e?.name !== 'AbortError') setError(e.message ?? String(e)); });
   }
 
-  async function share() {
-    setBusy(true);
-    try {
-      const file = await pdfFile();
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: `Invoice ${inv!.number}` });
-        if (inv!.status === 'draft') await setStatus('sent');
-      } else {
-        await download();
-      }
-    } catch (e: any) {
-      if (e?.name !== 'AbortError') setError(e.message ?? String(e));
-    } finally { setBusy(false); }
-  }
-
-  async function whatsAppFile() {
-    setBusy(true); setError('');
-    try {
-      const file = await pdfFile();
-      if (!navigator.canShare?.({ files: [file] })) {
-        setError('This browser cannot attach files. Use "WhatsApp link" instead.');
-        return;
-      }
-      await navigator.share({ files: [file], text: whatsAppMessage(inv!, settings!) });
-      if (inv!.status === 'draft') await setStatus('sent');
-    } catch (e: any) {
-      if (e?.name !== 'AbortError') setError(e.message ?? String(e));
-    } finally { setBusy(false); }
-  }
+  const markSentIfDraft = async () => { if (inv!.status === 'draft') await setStatus('sent'); };
+  const share = () => shareFile(markSentIfDraft);
+  // On iPhone, sharing a file plus text makes WhatsApp drop one of them, so share only the PDF.
+  const whatsAppFile = () => shareFile(markSentIfDraft);
 
   async function whatsAppLink() {
-    const w = openPendingWindow();
+    if (!pdf) return;
     setBusy(true); setError('');
     try {
-      const link = await pdfLink(inv!, await pdfFile());
+      const link = await pdfLink(inv!, pdf);
       const number = toWhatsAppNumber(inv!.customers?.phone, settings!.phone_country_code ?? '64');
-      const url = whatsAppUrl(number, whatsAppMessage(inv!, settings!, link));
-      if (w) w.location.href = url; else window.location.href = url;
-      if (inv!.status === 'draft') await setStatus('sent');
+      await markSentIfDraft();
+      // Same-tab navigation: iOS hands wa.me links straight to the WhatsApp app, and it is
+      // never blocked as a popup even after the async upload.
+      window.location.href = whatsAppUrl(number, whatsAppMessage(inv!, settings!, link));
     } catch (e: any) {
-      w?.close();
       setError(e.message ?? String(e));
     } finally { setBusy(false); }
   }
@@ -138,16 +135,17 @@ export default function InvoiceView() {
       {inv.notes && <div className="card text-sm whitespace-pre-line">{inv.notes}</div>}
 
       <ErrorText msg={error} />
+      {!pdf && <p className="text-sm text-gray-500">Preparing PDF...</p>}
       <div className="grid grid-cols-2 gap-2">
-        <button className="btn-primary" disabled={busy} onClick={share}>Share PDF</button>
-        <button className="btn-secondary" disabled={busy} onClick={download}>Download PDF</button>
+        <button className="btn-primary" disabled={busy || !pdf} onClick={share}>Share PDF</button>
+        <button className="btn-secondary" disabled={busy || !pdf} onClick={download}>Download PDF</button>
         {inv.status !== 'paid' && <button className="btn-secondary" onClick={() => setStatus('paid')}>Mark paid</button>}
         {inv.status === 'draft' && <button className="btn-secondary" onClick={() => setStatus('sent')}>Mark sent</button>}
         {inv.status !== 'void' && inv.status !== 'draft' && <button className="btn-secondary" onClick={() => setStatus('void')}>Void</button>}
         <Link to={`/invoices/${inv.id}/edit`} className="btn-secondary">Edit</Link>
         <Link to={`/invoices/${inv.id}/email`} className="btn-primary">Send email</Link>
-        <button className="btn bg-green-600 text-white active:bg-green-700" disabled={busy} onClick={whatsAppFile}>WhatsApp PDF</button>
-        <button className="btn bg-green-100 text-green-800 active:bg-green-200" disabled={busy} onClick={whatsAppLink}>WhatsApp link</button>
+        <button className="btn bg-green-600 text-white active:bg-green-700" disabled={busy || !pdf} onClick={whatsAppFile}>WhatsApp PDF</button>
+        <button className="btn bg-green-100 text-green-800 active:bg-green-200" disabled={busy || !pdf} onClick={whatsAppLink}>WhatsApp link</button>
         <button className="btn-danger" onClick={remove}>Delete</button>
       </div>
 
