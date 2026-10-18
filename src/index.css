@@ -2,22 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer components {
-  .input { @apply w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base focus:border-blue-500 focus:outline-none; min-height: 2.75rem; }
-  /* iOS renders empty date inputs collapsed and left-aligned without this. */
-  input[type='date'].input { -webkit-appearance: none; appearance: none; display: block; }
-  select.input { -webkit-appearance: none; appearance: none; }
-  .label { @apply block text-sm font-medium text-gray-700 mb-1; }
-  .btn { @apply inline-flex items-center justify-center rounded-lg px-4 py-2 font-medium disabled:opacity-50; min-height: 2.75rem; }
-  .btn-primary { @apply btn bg-blue-600 text-white active:bg-blue-700; }
-  .btn-secondary { @apply btn bg-gray-200 text-gray-800 active:bg-gray-300; }
-  .btn-danger { @apply btn bg-red-600 text-white active:bg-red-700; }
-  .card { @apply rounded-xl bg-white p-4 shadow-sm; }
+@layer base {
+  html, body {
+    /* Use the iOS system font (SF Pro) for a native look. */
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, sans-serif;
+    background: #f2f2f7; /* iOS grouped background */
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    /* Stop the whole page rubber-banding; scrolling still works normally. */
+    overscroll-behavior-y: none;
+  }
+  /* Remove 300ms double-tap zoom delay on taps. */
+  a, button, input, select, textarea, label { touch-action: manipulation; }
+  /* No text selection or long-press callout on UI chrome, like a native app. */
+  button, nav, .btn, .no-select { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  img { -webkit-touch-callout: none; }
 }
 
-/* Keep content clear of the notch and home indicator when launched from the iPhone home screen. */
-body {
-  padding-top: env(safe-area-inset-top);
-  -webkit-tap-highlight-color: transparent;
-  -webkit-text-size-adjust: 100%;
+@layer components {
+  .input { @apply w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-base focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100; min-height: 2.75rem; }
+  /* iOS renders empty date inputs collapsed and left-aligned without this. */
+  input[type='date'].input { -webkit-appearance: none; appearance: none; display: block; }
+  select.input {
+    -webkit-appearance: none; appearance: none; padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%239ca3af'%3E%3Cpath d='M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0.6rem center; background-size: 1.1rem;
+  }
+  .label { @apply block text-sm font-medium text-gray-600 mb-1; }
+  .btn { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-semibold transition-transform active:scale-[0.98] disabled:opacity-50; min-height: 2.75rem; }
+  .btn-primary { @apply btn bg-blue-600 text-white active:bg-blue-700; }
+  .btn-secondary { @apply btn bg-white text-blue-600 shadow-sm active:bg-gray-100; }
+  .btn-danger { @apply btn bg-white text-red-600 shadow-sm active:bg-red-50; }
+  .card { @apply rounded-2xl bg-white p-4 shadow-sm; }
+  /* Translucent bars like iOS navigation and tab bars. */
+  .ios-bar { background: rgba(249, 249, 251, 0.82); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
 }

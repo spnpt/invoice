@@ -82,6 +82,11 @@ Every table has `owner uuid default auth.uid()` and the RLS rule `owner = auth.u
 - Respect `env(safe-area-inset-*)`: the body pads the top, and the bottom navigation pads the bottom.
 - Home-screen icons are PNG (`public/apple-touch-icon.png` 180, `icon-192.png`, `icon-512.png`); iOS ignores SVG icons.
 - File inputs: `accept="image/*" capture="environment"` opens the camera, and a plain `accept="image/*"` opens the photo library.
+- **Native look:** every screen starts with `<PageHeader>`. It's a sticky, translucent iOS navigation bar: large title on tab screens, back chevron and compact title on sub-screens (pass `back`). Don't add another top bar.
+- The tab bar (in `App.tsx`) and headers use the `.ios-bar` blur style. Icons are inline SVG in `src/components/icons.tsx`; don't add icon libraries.
+- Bottom sheets or modals need the `data-modal` attribute so `PullToRefresh` ignores touches while they are open.
+- `PullToRefresh` is active only in standalone (home screen) mode, because Safari tabs already have their own.
+- `InstallBanner` appears only in iPhone Safari when the app is not installed, until dismissed (stored in `localStorage`).
 
 ## Email templates
 Placeholders are rendered client-side by `render()` in `src/lib/email.ts`:

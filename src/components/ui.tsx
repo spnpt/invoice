@@ -1,14 +1,29 @@
 import { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { ChevronLeft } from './icons';
 
+/**
+ * iOS-style navigation bar: sticky, translucent and clear of the notch.
+ * Top-level screens get a large title; sub-screens (with `back`) get a back chevron and a compact title.
+ */
 export function PageHeader({ title, action, back }: { title: string; action?: ReactNode; back?: string }) {
   return (
-    <div className="flex items-center justify-between mb-4 gap-2">
-      <div className="flex items-center gap-2">
-        {back && <Link to={back} className="text-blue-600 text-lg" aria-label="Back">&larr;</Link>}
-        <h1 className="text-2xl font-bold">{title}</h1>
-      </div>
-      {action}
+    <div className="ios-bar sticky top-0 z-30 -mx-4 mb-3 border-b border-black/5 px-4 no-select"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
+      {back ? (
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pb-2 min-h-[2.75rem]">
+          <Link to={back} className="flex items-center -ml-2 text-blue-600 text-[17px]" aria-label="Back">
+            <ChevronLeft className="h-6 w-6" />Back
+          </Link>
+          <h1 className="truncate text-[17px] font-semibold text-center">{title}</h1>
+          <div className="flex justify-end">{action}</div>
+        </div>
+      ) : (
+        <div className="flex items-end justify-between gap-2 pb-2 pt-1">
+          <h1 className="text-[32px] leading-tight font-bold tracking-tight">{title}</h1>
+          <div className="pb-1">{action}</div>
+        </div>
+      )}
     </div>
   );
 }

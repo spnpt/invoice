@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Invoice, InvoiceStatus, getSettings, money, supabase } from '../lib/supabase';
 import { ErrorText, PageHeader, StatusBadge } from '../components/ui';
+import InstallBanner from '../components/InstallBanner';
 
 const filters: (InvoiceStatus | 'all')[] = ['all', 'draft', 'sent', 'paid', 'void'];
 const statuses: InvoiceStatus[] = ['draft', 'sent', 'paid', 'void'];
@@ -39,6 +40,7 @@ export default function Invoices() {
   return (
     <div>
       <PageHeader title="Invoices" action={<Link to="/invoices/new" className="btn-primary">+ New</Link>} />
+      <InstallBanner />
       <div className="card mb-3 flex justify-between">
         <span className="text-gray-500">Outstanding</span>
         <span className="font-semibold">{money(outstanding, currency)}</span>
@@ -73,7 +75,7 @@ export default function Invoices() {
 
       {menuFor && (
         // Bottom sheet: easy to reach with a thumb on iPhone; tap the backdrop to close.
-        <div className="fixed inset-0 z-50 flex items-end bg-black/40" onClick={() => setMenuFor(null)}>
+        <div data-modal className="fixed inset-0 z-50 flex items-end bg-black/40" onClick={() => setMenuFor(null)}>
           <div className="w-full mx-auto max-w-3xl rounded-t-2xl bg-white p-4 space-y-2"
             style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
             onClick={e => e.stopPropagation()}>

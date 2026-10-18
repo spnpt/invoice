@@ -13,12 +13,14 @@ import InvoiceView from './pages/InvoiceView';
 import SettingsPage from './pages/Settings';
 import EmailTemplates from './pages/EmailTemplates';
 import SendEmail from './pages/SendEmail';
+import PullToRefresh from './components/PullToRefresh';
+import { BoxIcon, GearIcon, InvoiceIcon, PeopleIcon } from './components/icons';
 
 const tabs = [
-  { to: '/invoices', label: 'Invoices' },
-  { to: '/products', label: 'Products' },
-  { to: '/customers', label: 'Customers' },
-  { to: '/settings', label: 'Settings' },
+  { to: '/invoices', label: 'Invoices', Icon: InvoiceIcon },
+  { to: '/products', label: 'Products', Icon: BoxIcon },
+  { to: '/customers', label: 'Customers', Icon: PeopleIcon },
+  { to: '/settings', label: 'Settings', Icon: GearIcon },
 ];
 
 export default function App() {
@@ -39,12 +41,19 @@ export default function App() {
       </div>
     );
   }
-  if (loading) return <div className="p-6 text-center text-gray-500">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <img src="apple-touch-icon.png" alt="" className="h-16 w-16 rounded-2xl animate-pulse" />
+      </div>
+    );
+  }
   if (!session) return <Login />;
 
   return (
-    <div className="mx-auto max-w-3xl min-h-screen pb-20">
-      <main className="p-4">
+    <div className="mx-auto max-w-3xl min-h-screen">
+      <PullToRefresh />
+      <main className="px-4" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
         <Routes>
           <Route path="/" element={<Navigate to="/invoices" replace />} />
           <Route path="/invoices" element={<Invoices />} />
@@ -63,14 +72,15 @@ export default function App() {
           <Route path="*" element={<Navigate to="/invoices" replace />} />
         </Routes>
       </main>
-      <nav className="fixed bottom-0 inset-x-0 bg-white border-t print:hidden"
+      <nav className="ios-bar fixed bottom-0 inset-x-0 z-30 border-t border-black/10 print:hidden"
            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className="mx-auto max-w-3xl grid grid-cols-4">
-          {tabs.map(t => (
-            <NavLink key={t.to} to={t.to}
+          {tabs.map(({ to, label, Icon }) => (
+            <NavLink key={to} to={to}
               className={({ isActive }) =>
-                `py-3 text-center text-sm font-medium ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>
-              {t.label}
+                `flex flex-col items-center gap-0.5 pt-2 pb-1 text-[10px] font-medium ${isActive ? 'text-blue-600' : 'text-gray-400'}`}>
+              <Icon className="h-6 w-6" />
+              {label}
             </NavLink>
           ))}
         </div>
